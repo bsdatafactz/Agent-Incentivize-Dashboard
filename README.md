@@ -1,5 +1,10 @@
-# Field Agent Incentive Dashboard — Live Preview
+# Field Agent Incentive Dashboard — Frontend
 
-Static snapshot of the Django-rendered dashboard (demo agent data), published for viewing on GitHub Pages.
+Django frontend source for the Spectrum Field Agent Incentive Dashboard: Django templates (`templates/`) and static assets (`static/` — CSS, JS, logos).
 
-This is a visual snapshot, not the live app — GitHub Pages can't run Django. Theme toggle and modals work (client-side), but "Log a Sale" won't persist since there's no server behind this page. The real app lives in `webapp/` and runs with `python manage.py runserver`.
+This repo holds frontend files only — no views, models, URLs, or settings — so it isn't runnable standalone. It's meant for design/code review; the templates use Django template tags (`{% %}`, `{{ }}`) and are rendered by the full Django project.
+
+- `dashboard/templates/dashboard/home.html` — main dashboard page
+- `accounts/templates/registration/login.html` — sign-in page
+- `dashboard/static/dashboard/css/dashboard.css` — styles
+- `dashboard/static/dashboard/js/dashboard.js` — interactivity (log a sale, theme toggle, modals, charts)

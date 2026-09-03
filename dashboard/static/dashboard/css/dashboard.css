@@ -134,7 +134,7 @@
   .who-name{font-weight:800;font-size:13px;text-align:left;}
   .who-loc{font-size:10.5px;color:var(--ink-dim);font-weight:600;text-align:left;}
 
-  .content{padding:24px 28px 90px;max-width:1320px;margin:0 auto;width:100%;flex:1;}
+  .content{padding:24px 28px 90px;max-width:1320px;flex:1;}
 
   /* ---------- hero ---------- */
   .hero{background:linear-gradient(135deg,#16233F 0%,#0D1930 100%);border:3px solid var(--card-border);border-radius:20px;

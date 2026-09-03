@@ -1,0 +1,465 @@
+{% load static humanize dashboard_extras %}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spectrum Field</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'dashboard/css/dashboard.css' %}">
+</head>
+<body>
+  <div class="app" id="appScreen">
+    <aside class="sidebar">
+      <img class="sb-logo logo-navy" src="{% static 'dashboard/img/spectrum-logo-navy.png' %}" alt="Spectrum">
+      <img class="sb-logo logo-white" src="{% static 'dashboard/img/spectrum-logo-white.png' %}" alt="Spectrum">
+      <div class="sb-section-label">Menu</div>
+      <nav class="sb-nav">
+        <a class="sb-item active" href="{% url 'dashboard:home' %}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>
+          Dashboard
+        </a>
+        <button type="button" class="sb-item sb-item-soon" onclick="openModal('game')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="10" rx="5"/><path d="M8 10v4M6 12h4"/><circle cx="16" cy="11" r="1" fill="currentColor" stroke="none"/><circle cx="18" cy="13" r="1" fill="currentColor" stroke="none"/></svg>
+          Game <span class="soon-tag">Soon</span>
+        </button>
+      </nav>
+      <div class="sb-footer">
+        <div class="sb-rank-card tier-{{ level.major.name }}">
+          <div class="sb-rank-badge">{{ level.major.name|slice:":1" }}</div>
+          <div class="lvl">{{ level.major.name }} {{ level.current.sub }}</div>
+          <div class="to-next">
+            {% if level.next %}{{ level.points_to_next|intcomma }} pts to {{ level.next_major.name }} {{ level.next.sub }}{% else %}Top level reached{% endif %}
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <div class="topbar-left">Dashboard</div>
+        <div class="topbar-right">
+          <button class="icon-btn" id="themeToggle" aria-label="Toggle theme" title="Theme">
+            <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>
+            <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+          </button>
+          <button type="button" class="who" onclick="openModal('account')" title="Account">
+            <span class="avatar">{{ request.user.first_name|slice:":1" }}{{ request.user.last_name|slice:":1" }}</span>
+            <span><span class="who-name">{{ request.user.get_full_name|default:request.user.username }}</span><span class="who-loc">{{ agent.region|upper }}</span></span>
+          </button>
+        </div>
+      </header>
+
+      <div class="content">
+        <div class="hero">
+          <div class="signal-rings"><span></span><span></span><span></span></div>
+          <div class="hero-top">
+            <div class="streak">
+              <svg class="flame-flicker" viewBox="0 0 24 24" fill="none" stroke="var(--flame)" stroke-width="1.8"><path d="M12 2c1 4-4 5-4 9a4 4 0 0 0 8 0c0-1.5-.7-2-1-3 1 .3 2.5 1.6 2.5 4.5A5.5 5.5 0 0 1 12 22a5.5 5.5 0 0 1-5.5-5.5C6.5 11 9 8 12 2z"/></svg>
+              <div><div class="streak-num">{{ agent.streak_days }}</div><div class="streak-label">Day Streak</div></div>
+            </div>
+            <div class="rank-chip">{{ level.major.name }} {{ level.current.sub }}</div>
+          </div>
+          <div class="hero-headline">
+            You&rsquo;re <span class="pos">#{{ rank }}</span> in the region with <b>{{ total_points|intcomma }} pts</b> &mdash;
+            {% if level.next %}{{ level.points_to_next|intcomma }} from {{ level.next_major.name }} {{ level.next.sub }}.{% else %}top level reached.{% endif %}
+          </div>
+          <div class="xp-row">
+            <div class="xp-labels">
+              <span>{{ level.major.name }} {{ level.current.sub }}</span>
+              <span>{% if level.next %}{{ level.points_to_next|intcomma }} pts to {{ level.next_major.name }} {{ level.next.sub }}{% else %}Max level reached{% endif %}</span>
+            </div>
+            <div class="xp-track">
+              {% widthratio level.progress 1 10 as xp_filled %}
+              {% for i in "0123456789" %}
+                <div class="xp-seg{% if forloop.counter <= xp_filled %} filled{% endif %}"></div>
+              {% endfor %}
+            </div>
+          </div>
+          <button type="button" class="see-levels" onclick="openModal('levels')">See all 15 levels &rarr;</button>
+        </div>
+
+        <div class="dash-grid">
+          <section class="left-col">
+            <div class="card tier-card tier-{{ level.major.name }}" id="tierCard">
+              <div class="tier-top"><span class="tier-label">{{ level.major.name }}</span><span class="tier-points"><strong id="pointsValue">{{ total_points|intcomma }}</strong> pts</span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin:2px 0 14px;">
+                <h2 class="tier-name" style="margin:0;">{{ level.major.name }} <span>{{ level.current.sub }}</span></h2>
+                <button class="see-all" onclick="openModal('levels')">See all levels</button>
+              </div>
+              <div class="tier-track">
+                {% for seg in tier_track %}
+                  <div class="tier-seg{% if seg.is_current %} is-current{% endif %}">
+                    <div class="tier-seg-bar"><div class="tier-seg-fill tier-{{ seg.name }}" style="width:{{ seg.fill }}%"></div>
+                      <div class="tier-seg-ticks"><span></span><span></span><span></span></div></div>
+                    <div class="tier-seg-label">{{ seg.name|slice:":1" }}</div>
+                  </div>
+                {% endfor %}
+              </div>
+              <p class="tier-remaining">
+                {% if level.next %}
+                  <strong>{{ level.points_to_next|intcomma }} points</strong> from {{ level.next_major.name }} {{ level.next.sub }} &mdash; one strong sale gets you close.
+                {% else %}
+                  Top level reached &mdash; you&rsquo;re setting the pace for the region.
+                {% endif %}
+              </p>
+            </div>
+
+            <div class="card earnings-card">
+              <div class="section-head"><h3>Earnings</h3><button class="see-all" onclick="openModal('earnings')">Full breakdown</button></div>
+              <div class="earn-row">
+                <div><div class="earn-label">This month</div><div class="earn-amount">${{ month_incentive|floatformat:0|intcomma }}</div></div>
+                <div style="text-align:right;"><div class="earn-label">Last month</div><div class="earn-amount is-muted">${{ last_month_bonus|floatformat:0|intcomma }}</div><span class="earn-paid-tag">Paid</span></div>
+              </div>
+              <div class="earn-divider"></div>
+              <div class="earn-foot"><span>YTD: <strong>${{ ytd_incentive|floatformat:0|intcomma }}</strong></span><span>{% if agent.next_payout %}Next payout {{ agent.next_payout|date:"M j" }}{% else %}Next payout &mdash;{% endif %}</span></div>
+            </div>
+
+            <div class="card quicklog-card">
+              <div class="section-head"><h3>Log a sale</h3></div>
+              <div class="quicklog-list">
+                {% for svc in services %}
+                  <button type="button" class="log-btn" data-service-id="{{ svc.id }}" data-service-points="{{ svc.points }}">
+                    <span class="log-btn-left">
+                      <span class="log-btn-icon">
+                        {% if "Bundle" in svc.name %}
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4-8 4-8-4 8-4z"/><path d="M4 12l8 4 8-4"/><path d="M4 16l8 4 8-4"/></svg>
+                        {% elif "Internet" in svc.name %}
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.5a16 16 0 0 1 20 0"/><path d="M5 12a11 11 0 0 1 14 0"/><path d="M8.5 15.5a6 6 0 0 1 7 0"/><circle cx="12" cy="19" r="1.2" fill="currentColor" stroke="none"/></svg>
+                        {% elif "TV" in svc.name %}
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M8 21h8M12 18v3"/></svg>
+                        {% elif "Mobile" in svc.name %}
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>
+                        {% elif "Voice" in svc.name %}
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.7 19.7 0 0 1-8.6-3.1 19.4 19.4 0 0 1-6-6A19.7 19.7 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2.1z"/></svg>
+                        {% else %}
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/></svg>
+                        {% endif %}
+                      </span>
+                      <span class="log-btn-name">{{ svc.name }}</span>
+                    </span>
+                    <span class="log-btn-right"><span class="log-btn-points">+{{ svc.points }} pts</span><span class="log-btn-money">+${{ svc.incentive_amount|floatformat:0 }}</span></span>
+                  </button>
+                {% endfor %}
+              </div>
+            </div>
+          </section>
+
+          <section class="right-col">
+            <div class="kpi-row">
+              <div class="stat-tile">
+                <div class="stat-label">Points this week</div>
+                <div class="stat-foot"><div><div class="stat-value">{{ points_this_week|intcomma }}</div>
+                  {% if points_delta %}<div class="stat-delta is-{{ points_delta.direction }}">{% if points_delta.direction == 'up' %}&#9650;{% elif points_delta.direction == 'down' %}&#9660;{% else %}&mdash;{% endif %} {{ points_delta.pct }}% vs last week</div>{% endif %}</div>
+                  {{ points_spark }}</div>
+              </div>
+              <div class="stat-tile">
+                <div class="stat-label">Sales this week</div>
+                <div class="stat-foot"><div><div class="stat-value">{{ sales_this_week }}</div>
+                  {% if sales_delta %}<div class="stat-delta is-{{ sales_delta.direction }}">{% if sales_delta.direction == 'up' %}&#9650;{% elif sales_delta.direction == 'down' %}&#9660;{% else %}&mdash;{% endif %} {{ sales_delta.pct }}% vs last week</div>{% endif %}</div>
+                  {{ sales_spark }}</div>
+              </div>
+              <div class="stat-tile">
+                <div class="stat-label">Earnings this month</div>
+                <div class="stat-foot"><div><div class="stat-value">${{ month_incentive|floatformat:0|intcomma }}</div>
+                  {% if earn_delta %}<div class="stat-delta is-{{ earn_delta.direction }}">{% if earn_delta.direction == 'up' %}&#9650;{% elif earn_delta.direction == 'down' %}&#9660;{% else %}&mdash;{% endif %} {{ earn_delta.pct }}% vs last month</div>{% endif %}</div></div>
+              </div>
+              <div class="stat-tile">
+                <div class="stat-label">Region rank</div>
+                <div class="stat-foot"><div><div class="stat-value">#{{ rank }}</div></div></div>
+              </div>
+            </div>
+
+            <div class="card chart-card">
+              <div class="section-head"><h3>Points earned &middot; last 7 days</h3><button class="table-toggle" id="trendTableToggle">View as table</button></div>
+              <p class="chart-sub">Daily total, Monday through today.</p>
+              <div class="trend-chart-wrap" id="trendChartWrap">{{ trend_chart }}</div>
+              <table class="chart-table hidden" id="trendTable">
+                <thead><tr><th>Day</th><th>Points</th></tr></thead>
+                <tbody>{% for label in weekly_labels %}<tr><td>{{ label }}</td><td>{{ weekly_points|index:forloop.counter0|intcomma }} pts</td></tr>{% endfor %}</tbody>
+              </table>
+            </div>
+
+            <div class="card">
+              <div class="section-head"><h3>You vs. the region</h3></div>
+              <p class="chart-sub">Points earned this week.</p>
+              <div class="compare-list">
+                {% for row in compare_bars %}
+                  <div class="compare-row{% if row.is_you %} is-you{% endif %}">
+                    {% if row.is_team %}
+                      <span class="compare-avatar is-team">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                      </span>
+                    {% else %}
+                      <span class="compare-avatar" style="background:{{ row.color }}">{{ row.initials }}</span>
+                    {% endif %}
+                    <div class="compare-mid">
+                      <div class="compare-top"><span class="compare-name">{{ row.name }}</span><span class="compare-value">{{ row.value|intcomma }}</span></div>
+                      <div class="compare-track"><div class="compare-fill{% if row.is_you %} is-you{% endif %}" style="width:{{ row.pct }}%"></div></div>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="card chart-card">
+              <div class="section-head"><h3>Sales by service &middot; this month</h3>{% if service_bars %}<button class="table-toggle" id="serviceTableToggle">View as table</button>{% endif %}</div>
+              <p class="chart-sub">Units sold, ranked high to low.</p>
+              {% if service_bars %}
+                <div class="hbar-list" id="serviceBarList">
+                  {% for row in service_bars %}
+                    <div class="hbar-row">
+                      <span class="hbar-name">{{ row.name }}</span>
+                      <div class="hbar-track"><div class="hbar-fill is-accent" style="width:{{ row.pct }}%"></div></div>
+                      <span class="hbar-value">{{ row.value }}</span>
+                    </div>
+                  {% endfor %}
+                </div>
+                <table class="chart-table hidden" id="serviceTable">
+                  <thead><tr><th>Service</th><th>Units sold</th></tr></thead>
+                  <tbody>{% for row in service_bars %}<tr><td>{{ row.name }}</td><td>{{ row.value }}</td></tr>{% endfor %}</tbody>
+                </table>
+              {% else %}
+                <p class="chart-sub">No sales logged this month yet.</p>
+              {% endif %}
+            </div>
+
+            <div class="card">
+              <div class="section-head"><span class="section-head-title">
+                <svg class="ai-spark" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 5.6L19 9.5l-5.2 1.9L12 17l-1.8-5.6L5 9.5l5.2-1.9L12 2z"/></svg>
+                <h3>AI Insights</h3></span><button class="see-all" onclick="openModal('insights')">See all</button></div>
+              <p class="ai-caption">Generated from <strong>your last 30 days</strong> of sales, route, and territory data &mdash; refreshes daily.</p>
+              {% for i in insights %}
+                <article class="stat-insight-card">
+                  <div class="stat-insight-top"><span class="stat-insight-num">{{ i.num }}</span>
+                    <div class="stat-insight-copy"><span class="stat-insight-tag">{{ i.tag }}</span>
+                      <p class="stat-insight-label">{{ i.label }}</p></div></div>
+                  <p class="stat-insight-action">Do this: {{ i.action }}</p>
+                </article>
+              {% endfor %}
+            </div>
+
+            <div class="card">
+              <div class="section-head"><h3>Leaderboard</h3><button class="see-all" onclick="openModal('leaderboard')">See all</button></div>
+              <ol class="lb-list">
+                {% for e in leaderboard|slice:":5" %}
+                  <li class="lb-row{% if e.is_you %} is-you{% endif %}">
+                    <span class="lb-rank">#{{ forloop.counter }}</span>
+                    <span class="lb-avatar" style="background:{{ e.color }}">{{ e.initials }}</span>
+                    <span class="lb-name">{{ e.name }}{% if e.is_you %} (You){% endif %}</span>
+                    <span class="lb-points">{{ e.points|intcomma }}</span>
+                  </li>
+                {% endfor %}
+              </ol>
+            </div>
+            <div class="card">
+              <div class="section-head"><h3>Recent activity</h3></div>
+              <ul class="lb-list" style="display:flex;flex-direction:column;">
+                {% for sale in recent_activity %}
+                  <li class="activity-row"><span class="activity-dot"></span>
+                    <span class="activity-main"><div class="activity-name">{{ sale.service.name }}</div><div class="activity-time">{{ sale.created_at|date:"D, g:i A" }}</div></span>
+                    <span style="text-align:right;"><div class="activity-pts">+{{ sale.points }} pts</div><div class="activity-money">+${{ sale.incentive_amount|floatformat:0 }}</div></span></li>
+                {% empty %}
+                  <li class="activity-row"><span class="activity-main"><div class="activity-name">No sales logged yet.</div></span></li>
+                {% endfor %}
+              </ul>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <nav class="tab-bar">
+      <button class="tab-btn is-active" onclick="document.getElementById('appScreen').scrollIntoView()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>
+        <span>Home</span>
+      </button>
+      <button class="tab-btn" onclick="openModal('insights')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-6 4 4 5-8 4 5"/></svg>
+        <span>AI Insights</span>
+      </button>
+      <button class="tab-btn" onclick="openModal('leaderboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M9 21v-5M15 21v-8M4 21V10M20 21v-6M4 10a4 4 0 0 0 4-4V4H4v6zM20 15a4 4 0 0 0-4-4V9h4v6z"/></svg>
+        <span>Ranks</span>
+      </button>
+      <button class="tab-btn" onclick="openModal('levels')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5M3 17l9 5 9-5"/></svg>
+        <span>Levels</span>
+      </button>
+      <button class="tab-btn" onclick="openModal('account')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4.5 5-6 8-6s6.5 1.5 8 6"/></svg>
+        <span>Account</span>
+      </button>
+    </nav>
+  </div>
+
+  <button type="button" class="chat-fab" onclick="openModal('chat')" title="Ask Spectrum AI">
+    <span class="chat-fab-ring"></span>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6A8.4 8.4 0 0 1 12.5 3h.5a8.5 8.5 0 0 1 8 8v.5z"/></svg>
+  </button>
+
+  <div class="modal-overlay hidden" id="modal-insights">
+    <div class="modal-card"><div class="modal-head"><h2>All AI insights near you</h2>
+      <button class="modal-close" onclick="closeModal('insights')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+      <div class="insight-list">
+        {% for i in insights %}
+          <article class="stat-insight-card">
+            <div class="stat-insight-top"><span class="stat-insight-num">{{ i.num }}</span>
+              <div class="stat-insight-copy"><span class="stat-insight-tag">{{ i.tag }}</span>
+                <p class="stat-insight-label">{{ i.label }}</p></div></div>
+            <p class="stat-insight-action">Do this: {{ i.action }}</p>
+          </article>
+        {% endfor %}
+      </div>
+      <button type="button" class="btn-primary" style="margin-top:14px;" onclick="closeModal('insights');openModal('chat')">Ask a follow-up</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="modal-chat">
+    <div class="modal-card chat-modal-card">
+      <div class="modal-head"><h2><svg class="ai-spark" style="margin-right:6px;" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 5.6L19 9.5l-5.2 1.9L12 17l-1.8-5.6L5 9.5l5.2-1.9L12 2z"/></svg>Ask Spectrum AI</h2>
+        <button class="modal-close" onclick="closeModal('chat')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+      <div class="chat-thread">
+        <div class="chat-row">
+          <span class="chat-avatar"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 5.6L19 9.5l-5.2 1.9L12 17l-1.8-5.6L5 9.5l5.2-1.9L12 2z"/></svg></span>
+          <div class="chat-bubble">Hey {{ request.user.first_name|default:request.user.username }} &mdash; I&rsquo;ve been watching your territory data. Ask me anything, or try one of these:</div>
+        </div>
+        {% if insights.0 %}
+        <div class="chat-row is-you">
+          <span class="chat-avatar">{{ request.user.first_name|slice:":1" }}{{ request.user.last_name|slice:":1" }}</span>
+          <div class="chat-bubble">Why is my {{ insights.0.tag|lower }} up?</div>
+        </div>
+        <div class="chat-row">
+          <span class="chat-avatar"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 5.6L19 9.5l-5.2 1.9L12 17l-1.8-5.6L5 9.5l5.2-1.9L12 2z"/></svg></span>
+          <div class="chat-bubble">You&rsquo;re {{ insights.0.label }} right now, at <strong>{{ insights.0.num }}</strong>. {{ insights.0.action }}</div>
+        </div>
+        {% endif %}
+        {% if insights.1 %}
+        <div class="chat-row is-you">
+          <span class="chat-avatar">{{ request.user.first_name|slice:":1" }}{{ request.user.last_name|slice:":1" }}</span>
+          <div class="chat-bubble">When should I be knocking doors today?</div>
+        </div>
+        <div class="chat-row">
+          <span class="chat-avatar"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 5.6L19 9.5l-5.2 1.9L12 17l-1.8-5.6L5 9.5l5.2-1.9L12 2z"/></svg></span>
+          <div class="chat-bubble"><strong>{{ insights.1.num }}</strong> {{ insights.1.label }}. {{ insights.1.action }}</div>
+        </div>
+        {% endif %}
+        {% if insights.2 %}
+        <div class="chat-row is-you">
+          <span class="chat-avatar">{{ request.user.first_name|slice:":1" }}{{ request.user.last_name|slice:":1" }}</span>
+          <div class="chat-bubble">Anything I should stop pitching?</div>
+        </div>
+        <div class="chat-row">
+          <span class="chat-avatar"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 5.6L19 9.5l-5.2 1.9L12 17l-1.8-5.6L5 9.5l5.2-1.9L12 2z"/></svg></span>
+          <div class="chat-bubble">{{ insights.2.label|capfirst }} (<strong>{{ insights.2.num }}</strong>). {{ insights.2.action }}</div>
+        </div>
+        {% endif %}
+      </div>
+      <div class="chat-input-row">
+        <span class="chat-input-placeholder">Ask a follow-up&hellip; (demo only for now)</span>
+        <span class="chat-send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="modal-leaderboard">
+    <div class="modal-card"><div class="modal-head"><h2>Leaderboard &middot; This week</h2>
+      <button class="modal-close" onclick="closeModal('leaderboard')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+      <ol class="lb-list">
+        {% for e in leaderboard %}
+          <li class="lb-row{% if e.is_you %} is-you{% endif %}">
+            <span class="lb-rank">#{{ forloop.counter }}</span>
+            <span class="lb-avatar" style="background:{{ e.color }}">{{ e.initials }}</span>
+            <span class="lb-name">{{ e.name }}{% if e.is_you %} (You){% endif %}</span>
+            <span class="lb-points">{{ e.points|intcomma }}</span>
+          </li>
+        {% endfor %}
+      </ol>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="modal-levels">
+    <div class="modal-card"><div class="modal-head"><h2>Levels &middot; Bronze to Diamond</h2>
+      <button class="modal-close" onclick="closeModal('levels')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+      {% for grp in levels_breakdown %}
+        <div class="levels-major tier-{{ grp.name }}">
+          <div class="level-group-head"><span class="level-group-dot"></span><strong>{{ grp.name }}</strong></div>
+          <p class="level-group-benefit">{{ grp.benefit }}</p>
+          <div style="margin-top:8px;">
+            {% for lv in grp.sublevels %}
+              <div class="sub-level-row{% if lv.is_current %} is-current{% endif %}">
+                <span class="sub-level-numeral">{{ lv.sub }}</span>
+                <span class="sub-level-range">{{ lv.range_text }}</span>
+                {% if lv.is_current %}<span class="sub-level-tag">You</span>{% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="modal-earnings">
+    <div class="modal-card"><div class="modal-head"><h2>Earnings breakdown</h2>
+      <button class="modal-close" onclick="closeModal('earnings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+      <div class="earn-row">
+        <div><div class="earn-label">This month</div><div class="earn-amount">${{ month_incentive|floatformat:0|intcomma }}</div></div>
+        <div style="text-align:right;"><div class="earn-label">Last month</div><div class="earn-amount is-muted">${{ last_month_bonus|floatformat:0|intcomma }}</div><span class="earn-paid-tag">Paid</span></div>
+      </div>
+      <div class="earn-divider"></div>
+      <div class="earn-foot" style="margin-bottom:14px;"><span>YTD: <strong>${{ ytd_incentive|floatformat:0|intcomma }}</strong></span><span>{% if agent.next_payout %}Next payout {{ agent.next_payout|date:"M j" }}{% else %}Next payout &mdash;{% endif %}</span></div>
+      <div class="section-head"><h3>This month&rsquo;s logged sales</h3></div>
+      <ul class="lb-list" style="display:flex;flex-direction:column;">
+        {% for sale in recent_activity %}
+          <li class="activity-row"><span class="activity-dot"></span>
+            <span class="activity-main"><div class="activity-name">{{ sale.service.name }}</div><div class="activity-time">{{ sale.created_at|date:"D, g:i A" }}</div></span>
+            <span style="text-align:right;"><div class="activity-pts">+{{ sale.points }} pts</div><div class="activity-money">+${{ sale.incentive_amount|floatformat:0 }}</div></span></li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="modal-account">
+    <div class="modal-card"><div class="modal-head"><h2>Account</h2>
+      <button class="modal-close" onclick="closeModal('account')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+      <div class="account-row"><span>Name</span><span>{{ request.user.get_full_name|default:request.user.username }}</span></div>
+      <div class="account-row"><span>Agent ID</span><span>{{ agent.agent_id }}</span></div>
+      <div class="account-row"><span>Region</span><span>{{ agent.region }}</span></div>
+      <div class="account-row"><span>Joined</span><span>{{ agent.joined|date:"M Y" }}</span></div>
+      <div class="account-row"><span>Current level</span><span>{{ level.major.name }} {{ level.current.sub }}</span></div>
+      <div class="account-row"><span>Streak</span><span>{{ agent.streak_days }} days</span></div>
+      <div class="account-row"><span>This month earnings</span><span>${{ month_incentive|floatformat:0|intcomma }}</span></div>
+      <div class="account-row"><span>Last month bonus (paid)</span><span>${{ last_month_bonus|floatformat:0|intcomma }}</span></div>
+      <div class="account-row"><span>YTD earnings</span><span>${{ ytd_incentive|floatformat:0|intcomma }}</span></div>
+      <form id="logoutForm" method="post" action="{% url 'logout' %}">{% csrf_token %}</form>
+      <button class="btn-primary" style="margin-top:18px;" onclick="signOut()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="modal-game">
+    <div class="modal-card logged-card">
+      <div class="logged-badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="10" rx="5"/><path d="M8 10v4M6 12h4"/><circle cx="16" cy="11" r="1" fill="currentColor" stroke="none"/><circle cx="18" cy="13" r="1" fill="currentColor" stroke="none"/></svg>
+      </div>
+      <h2>Game mode &mdash; coming soon</h2>
+      <p>A second page where your points play out as an actual game is on the roadmap. Nothing to see here yet.</p>
+      <button type="button" class="btn-primary" style="width:auto;" onclick="closeModal('game')">Back to dashboard</button>
+    </div>
+  </div>
+
+  <div class="tierup-overlay hidden" id="tierupOverlay">
+    <div class="tierup-card">
+      <div class="tierup-eyebrow">Tier up</div>
+      <div class="tierup-badge tier-{{ level.major.name }}" id="tierupBadge">{{ level.major.name|slice:":1" }}</div>
+      <h2 id="tierupTitle">Welcome to {{ level.major.name }}</h2>
+      <p id="tierupBody">{{ level.major.benefit }}</p>
+      <button class="btn-primary" style="width:auto;padding:12px 28px;" onclick="closeTierUp()">Keep going</button>
+    </div>
+  </div>
+
+  {% csrf_token %}
+  <script>window.LOG_SALE_URL = "{% url 'dashboard:log_sale' %}";</script>
+  <script src="{% static 'dashboard/js/dashboard.js' %}"></script>
+</body>
+</html>
